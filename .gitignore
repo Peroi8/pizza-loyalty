@@ -1,0 +1,8 @@
+node_modules/
+.next/
+.env
+.env.local
+certs/
+*.pem
+*.p12
+google-service-account.json

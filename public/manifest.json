@@ -1,0 +1,9 @@
+{
+  "name": "Pizzeria Treuepunkte",
+  "short_name": "Treuepunkte",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#e53e3e",
+  "icons": []
+}
