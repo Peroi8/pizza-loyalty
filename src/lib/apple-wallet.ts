@@ -12,6 +12,11 @@ interface PassData {
   totalEarned: number;
 }
 
+function loadCert(envBase64: string | undefined, envPath: string | undefined, defaultPath: string): Buffer {
+  if (envBase64) return Buffer.from(envBase64, "base64");
+  return fs.readFileSync(envPath || defaultPath);
+}
+
 export async function generateApplePass(data: PassData): Promise<Buffer> {
   const certDirectory = path.resolve(process.cwd(), "certs");
   const [settings, tiers] = await Promise.all([loadSettings(), loadTiers()]);
@@ -20,15 +25,9 @@ export async function generateApplePass(data: PassData): Promise<Buffer> {
   const pass = new PKPass(
     {},
     {
-      signerCert: fs.readFileSync(
-        process.env.APPLE_PASS_CERT_PATH || path.join(certDirectory, "signerCert.pem")
-      ),
-      signerKey: fs.readFileSync(
-        process.env.APPLE_PASS_KEY_PATH || path.join(certDirectory, "signerKey.pem")
-      ),
-      wwdr: fs.readFileSync(
-        process.env.APPLE_WWDR_CERT_PATH || path.join(certDirectory, "WWDR.pem")
-      ),
+      signerCert: loadCert(process.env.APPLE_PASS_CERT_BASE64, process.env.APPLE_PASS_CERT_PATH, path.join(certDirectory, "signerCert.pem")),
+      signerKey: loadCert(process.env.APPLE_PASS_KEY_BASE64, process.env.APPLE_PASS_KEY_PATH, path.join(certDirectory, "signerKey.pem")),
+      wwdr: loadCert(process.env.APPLE_WWDR_CERT_BASE64, process.env.APPLE_WWDR_CERT_PATH, path.join(certDirectory, "WWDR.pem")),
       signerKeyPassphrase: process.env.APPLE_PASS_KEY_PASSPHRASE,
     },
     {
