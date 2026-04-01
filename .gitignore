@@ -6,3 +6,4 @@ certs/
 *.pem
 *.p12
 google-service-account.json
+ZUGANGSDATEN.md

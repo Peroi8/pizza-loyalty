@@ -13,6 +13,8 @@ interface PassData {
 }
 
 function getCredentials() {
+  const base64 = process.env.GOOGLE_SERVICE_ACCOUNT_BASE64;
+  if (base64) return JSON.parse(Buffer.from(base64, "base64").toString("utf-8"));
   const keyPath = process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH;
   if (!keyPath) throw new Error("GOOGLE_SERVICE_ACCOUNT_KEY_PATH nicht gesetzt");
   return JSON.parse(fs.readFileSync(keyPath, "utf-8"));
