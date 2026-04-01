@@ -304,12 +304,10 @@ export default function StaffPage() {
           <form onSubmit={handleLogin} className="space-y-4">
             <input
               type="password"
-              inputMode="numeric"
-              pattern="[0-9]*"
               value={pin}
               onChange={(e) => setPin(e.target.value)}
-              placeholder="PIN eingeben"
-              className="w-full px-4 py-3 border rounded-lg text-center text-2xl tracking-widest focus:ring-2 focus:ring-yellow-400 outline-none"
+              placeholder="Passwort eingeben"
+              className="w-full px-4 py-3 border rounded-lg text-center text-lg tracking-wide focus:ring-2 focus:ring-yellow-400 outline-none"
               required
             />
             {loginError && (
