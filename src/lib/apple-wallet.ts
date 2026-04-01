@@ -22,8 +22,20 @@ export async function generateApplePass(data: PassData): Promise<Buffer> {
   const [settings, tiers] = await Promise.all([loadSettings(), loadTiers()]);
   const tier = getTierForPoints(data.totalEarned, tiers);
 
+  // Icon-Bilder laden (Apple verlangt mindestens icon.png)
+  const publicDir = path.resolve(process.cwd(), "public");
+  const passImages: Record<string, Buffer> = {};
+  const imageFiles = ["icon.png", "icon@2x.png", "icon@3x.png", "logo.png", "logo@2x.png"];
+  for (const img of imageFiles) {
+    try {
+      passImages[img] = fs.readFileSync(path.join(publicDir, img));
+    } catch {
+      // Optional: Bild nicht vorhanden
+    }
+  }
+
   const pass = new PKPass(
-    {},
+    passImages,
     {
       signerCert: loadCert(process.env.APPLE_PASS_CERT_BASE64, process.env.APPLE_PASS_CERT_PATH, path.join(certDirectory, "signerCert.pem")),
       signerKey: loadCert(process.env.APPLE_PASS_KEY_BASE64, process.env.APPLE_PASS_KEY_PATH, path.join(certDirectory, "signerKey.pem")),
