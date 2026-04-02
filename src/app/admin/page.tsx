@@ -144,7 +144,25 @@ interface BirthdayCustomer {
   isToday: boolean;
 }
 
-type TabType = "dashboard" | "customers" | "transactions" | "analytics" | "items" | "export" | "engagement" | "promotions" | "challenges" | "events" | "feedback" | "design" | "tiers";
+interface StaffMember {
+  id: string;
+  name: string;
+  pin: string;
+  location_id: string | null;
+  active: boolean;
+  created_at: string;
+  locations?: { name: string } | null;
+}
+
+interface LocationData {
+  id: string;
+  name: string;
+  address: string | null;
+  created_at: string;
+  staff_count: number;
+}
+
+type TabType = "dashboard" | "customers" | "transactions" | "analytics" | "items" | "export" | "engagement" | "promotions" | "challenges" | "events" | "feedback" | "design" | "tiers" | "staff" | "locations";
 
 export default function AdminPage() {
   const [authenticated, setAuthenticated] = useState(false);
@@ -223,6 +241,18 @@ export default function AdminPage() {
   // Referrals
   const [referrals, setReferrals] = useState<{ referrer: { name: string }; referred: { name: string }; created_at: string }[]>([]);
 
+  // Staff Management
+  const [staffList, setStaffList] = useState<StaffMember[]>([]);
+  const [editStaff, setEditStaff] = useState<Partial<StaffMember> | null>(null);
+  const [staffSaved, setStaffSaved] = useState("");
+  const [staffError, setStaffError] = useState("");
+
+  // Location Management
+  const [locationList, setLocationList] = useState<LocationData[]>([]);
+  const [editLocation, setEditLocation] = useState<Partial<LocationData> | null>(null);
+  const [locationSaved, setLocationSaved] = useState("");
+  const [locationError, setLocationError] = useState("");
+
   function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     if (password === process.env.NEXT_PUBLIC_ADMIN_PASSWORD || password === "admin" || password === "demo") {
@@ -257,7 +287,19 @@ export default function AdminPage() {
     });
     fetch("/api/engagement").then((r) => r.json()).then((d) => setEngagementOverview(d));
     fetch("/api/referral").then((r) => r.json()).then((d) => setReferrals(d.referrals || []));
+    loadStaffList();
+    loadLocationList();
   }, [authenticated]);
+
+  async function loadStaffList() {
+    const res = await fetch("/api/admin/staff", { headers: { authorization: password } });
+    if (res.ok) { const d = await res.json(); setStaffList(d.staff || []); }
+  }
+
+  async function loadLocationList() {
+    const res = await fetch("/api/admin/locations", { headers: { authorization: password } });
+    if (res.ok) { const d = await res.json(); setLocationList(d.locations || []); }
+  }
 
   useEffect(() => {
     if (!authenticated) return;
@@ -473,6 +515,73 @@ export default function AdminPage() {
     window.open(`/api/marketing?${params}`, "_blank");
   }
 
+  // === STAFF CRUD ===
+  async function saveStaff() {
+    if (!editStaff?.name || !editStaff?.pin) { setStaffError("Name und PIN sind erforderlich"); return; }
+    setStaffError("");
+    const isNew = !editStaff.id;
+    const res = await fetch("/api/admin/staff", {
+      method: isNew ? "POST" : "PUT",
+      headers: { "Content-Type": "application/json", authorization: password },
+      body: JSON.stringify(editStaff),
+    });
+    if (res.ok) {
+      await loadStaffList();
+      setEditStaff(null);
+      setStaffSaved(isNew ? "Mitarbeiter erstellt!" : "Mitarbeiter aktualisiert!");
+      setTimeout(() => setStaffSaved(""), 3000);
+    } else {
+      const d = await res.json();
+      setStaffError(d.error || "Fehler beim Speichern");
+    }
+  }
+
+  async function toggleStaffActive(staff: StaffMember) {
+    await fetch("/api/admin/staff", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", authorization: password },
+      body: JSON.stringify({ id: staff.id, active: !staff.active }),
+    });
+    await loadStaffList();
+  }
+
+  // === LOCATION CRUD ===
+  async function saveLocation() {
+    if (!editLocation?.name) { setLocationError("Name ist erforderlich"); return; }
+    setLocationError("");
+    const isNew = !editLocation.id;
+    const res = await fetch("/api/admin/locations", {
+      method: isNew ? "POST" : "PUT",
+      headers: { "Content-Type": "application/json", authorization: password },
+      body: JSON.stringify(editLocation),
+    });
+    if (res.ok) {
+      await loadLocationList();
+      setEditLocation(null);
+      setLocationSaved(isNew ? "Standort erstellt!" : "Standort aktualisiert!");
+      setTimeout(() => setLocationSaved(""), 3000);
+    } else {
+      const d = await res.json();
+      setLocationError(d.error || "Fehler beim Speichern");
+    }
+  }
+
+  async function deleteLocation(id: string) {
+    setLocationError("");
+    const res = await fetch(`/api/admin/locations?id=${id}`, {
+      method: "DELETE",
+      headers: { authorization: password },
+    });
+    if (res.ok) {
+      await loadLocationList();
+      setLocationSaved("Standort geloescht!");
+      setTimeout(() => setLocationSaved(""), 3000);
+    } else {
+      const d = await res.json();
+      setLocationError(d.error || "Fehler beim Loeschen");
+    }
+  }
+
   // === LOGIN ===
   if (!authenticated) {
     return (
@@ -507,6 +616,8 @@ export default function AdminPage() {
     { key: "events", label: "Events" },
     { key: "feedback", label: "Feedback" },
     { key: "export", label: "Export" },
+    { key: "staff", label: "Mitarbeiter" },
+    { key: "locations", label: "Standorte" },
     { key: "design", label: "Design" },
     { key: "tiers", label: "Tiers" },
   ];
@@ -1432,6 +1543,141 @@ export default function AdminPage() {
         )}
 
         {/* === TIERS === */}
+        {/* === STANDORTE === */}
+        {tab === "locations" && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-xl p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="font-semibold text-lg">Standorte</h2>
+                <button
+                  onClick={() => setEditLocation({ name: "", address: "" })}
+                  className="px-3 py-1 text-white rounded-lg text-sm" style={{ backgroundColor: s.secondary_color }}>
+                  + Neuer Standort
+                </button>
+              </div>
+              {locationSaved && <p className="text-green-600 text-sm mb-3">{locationSaved}</p>}
+              {locationError && <p className="text-red-600 text-sm mb-3">{locationError}</p>}
+              <div className="space-y-3">
+                {locationList.map((loc) => (
+                  <div key={loc.id} className="flex items-center gap-4 p-4 border rounded-lg">
+                    <div className="text-2xl">📍</div>
+                    <div className="flex-1">
+                      <p className="font-semibold">{loc.name}</p>
+                      <p className="text-sm text-gray-500">{loc.address || "Keine Adresse hinterlegt"}</p>
+                      <p className="text-xs text-gray-400 mt-1">{loc.staff_count} Mitarbeiter zugeordnet</p>
+                    </div>
+                    <button onClick={() => setEditLocation({ ...loc })} className="text-sm text-gray-500 hover:underline">Bearbeiten</button>
+                    <button onClick={() => deleteLocation(loc.id)} className="text-sm text-red-500 hover:underline">Loeschen</button>
+                  </div>
+                ))}
+                {locationList.length === 0 && <p className="text-gray-500 text-sm">Keine Standorte vorhanden.</p>}
+              </div>
+            </div>
+
+            {editLocation && (
+              <div className="bg-white rounded-xl p-6">
+                <h2 className="font-semibold mb-4">{editLocation.id ? "Standort bearbeiten" : "Neuer Standort"}</h2>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <SettingField label="Name" value={editLocation.name || ""}
+                    onChange={(v) => setEditLocation({ ...editLocation, name: v })} />
+                  <SettingField label="Adresse" value={editLocation.address || ""}
+                    onChange={(v) => setEditLocation({ ...editLocation, address: v })} />
+                </div>
+                <div className="mt-4 flex gap-2">
+                  <button onClick={saveLocation} className="px-6 py-2 text-white rounded-lg font-semibold"
+                    style={{ backgroundColor: s.secondary_color }}>Speichern</button>
+                  <button onClick={() => { setEditLocation(null); setLocationError(""); }} className="px-4 py-2 border rounded-lg text-gray-600">Abbrechen</button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* === MITARBEITER === */}
+        {tab === "staff" && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-xl p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="font-semibold text-lg">Mitarbeiter</h2>
+                <button
+                  onClick={() => setEditStaff({ name: "", pin: "", location_id: locationList.length > 0 ? locationList[0].id : null, active: true })}
+                  className="px-3 py-1 text-white rounded-lg text-sm" style={{ backgroundColor: s.secondary_color }}>
+                  + Neuer Mitarbeiter
+                </button>
+              </div>
+              {staffSaved && <p className="text-green-600 text-sm mb-3">{staffSaved}</p>}
+              {staffError && <p className="text-red-600 text-sm mb-3">{staffError}</p>}
+
+              {/* Tabelle */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-left text-gray-500">
+                      <th className="py-2 px-2">Name</th>
+                      <th className="py-2 px-2">PIN</th>
+                      <th className="py-2 px-2">Standort</th>
+                      <th className="py-2 px-2">Status</th>
+                      <th className="py-2 px-2">Aktionen</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {staffList.map((st) => (
+                      <tr key={st.id} className={`border-b ${!st.active ? "opacity-50" : ""}`}>
+                        <td className="py-3 px-2 font-medium">{st.name}</td>
+                        <td className="py-3 px-2 font-mono text-gray-600">{st.pin}</td>
+                        <td className="py-3 px-2">{st.locations?.name || <span className="text-gray-400">-</span>}</td>
+                        <td className="py-3 px-2">
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${st.active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                            {st.active ? "Aktiv" : "Inaktiv"}
+                          </span>
+                        </td>
+                        <td className="py-3 px-2 flex gap-2">
+                          <button onClick={() => setEditStaff({ ...st })} className="text-sm text-gray-500 hover:underline">Bearbeiten</button>
+                          <button onClick={() => toggleStaffActive(st)}
+                            className={`text-sm hover:underline ${st.active ? "text-red-500" : "text-green-500"}`}>
+                            {st.active ? "Deaktivieren" : "Aktivieren"}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {staffList.length === 0 && <p className="text-gray-500 text-sm text-center py-4">Keine Mitarbeiter vorhanden.</p>}
+              </div>
+            </div>
+
+            {/* Edit/Create Form */}
+            {editStaff && (
+              <div className="bg-white rounded-xl p-6">
+                <h2 className="font-semibold mb-4">{editStaff.id ? "Mitarbeiter bearbeiten" : "Neuer Mitarbeiter"}</h2>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <SettingField label="Name" value={editStaff.name || ""}
+                    onChange={(v) => setEditStaff({ ...editStaff, name: v })} />
+                  <SettingField label="PIN (mind. 4 Zeichen)" value={editStaff.pin || ""}
+                    onChange={(v) => setEditStaff({ ...editStaff, pin: v })} />
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Standort</label>
+                    <select
+                      value={editStaff.location_id || ""}
+                      onChange={(e) => setEditStaff({ ...editStaff, location_id: e.target.value || null })}
+                      className="w-full px-3 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-yellow-400 text-sm">
+                      <option value="">-- Kein Standort --</option>
+                      {locationList.map((loc) => (
+                        <option key={loc.id} value={loc.id}>{loc.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="mt-4 flex gap-2">
+                  <button onClick={saveStaff} className="px-6 py-2 text-white rounded-lg font-semibold"
+                    style={{ backgroundColor: s.secondary_color }}>Speichern</button>
+                  <button onClick={() => { setEditStaff(null); setStaffError(""); }} className="px-4 py-2 border rounded-lg text-gray-600">Abbrechen</button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {tab === "tiers" && (
           <div className="space-y-6">
             {/* Bestehende Tiers */}
