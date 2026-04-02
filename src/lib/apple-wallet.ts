@@ -64,10 +64,12 @@ export async function generateApplePass(data: PassData): Promise<Buffer> {
     value: data.pointsBalance,
   });
 
-  pass.primaryFields.push({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (pass.primaryFields as any[]).push({
     key: "name",
     label: "MITGLIED",
     value: data.customerName,
+    textAlignment: "PKTextAlignmentCenter",
   });
 
   pass.secondaryFields.push(
@@ -80,16 +82,13 @@ export async function generateApplePass(data: PassData): Promise<Buffer> {
       key: "next",
       label: "Naechste Stufe",
       value: nextTier ? `noch ${nextTier.pointsNeeded} Pkt` : "🏆 Max erreicht!",
-    }
-  );
-
-  pass.auxiliaryFields.push(
+    },
     {
       key: "member_since",
       label: "Mitglied seit",
       value: data.createdAt
-        ? new Date(data.createdAt).toLocaleDateString("de-DE", { month: "long", year: "numeric" })
-        : new Date().toLocaleDateString("de-DE", { month: "long", year: "numeric" }),
+        ? new Date(data.createdAt).toLocaleDateString("de-DE", { month: "short", year: "numeric" })
+        : new Date().toLocaleDateString("de-DE", { month: "short", year: "numeric" }),
     }
   );
 
