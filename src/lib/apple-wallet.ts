@@ -3,13 +3,14 @@ import * as fs from "fs";
 import * as path from "path";
 import { v4 as uuidv4 } from "uuid";
 import { getSupabaseAdmin } from "./supabase";
-import { loadSettings, loadTiers, getTierForPoints, hexToRgb } from "./settings";
+import { loadSettings, loadTiers, getTierForPoints, getNextTier, hexToRgb } from "./settings";
 
 interface PassData {
   customerId: string;
   customerName: string;
   pointsBalance: number;
   totalEarned: number;
+  createdAt?: string;
 }
 
 function loadCert(envBase64: string | undefined, envPath: string | undefined, defaultPath: string): Buffer {
@@ -21,6 +22,7 @@ export async function generateApplePass(data: PassData): Promise<Buffer> {
   const certDirectory = path.resolve(process.cwd(), "certs");
   const [settings, tiers] = await Promise.all([loadSettings(), loadTiers()]);
   const tier = getTierForPoints(data.totalEarned, tiers);
+  const nextTier = getNextTier(data.totalEarned, tiers);
 
   // Icon-Bilder laden (Apple verlangt mindestens icon.png)
   const publicDir = path.resolve(process.cwd(), "public");
@@ -48,9 +50,9 @@ export async function generateApplePass(data: PassData): Promise<Buffer> {
       organizationName: settings.pizzeria_name,
       passTypeIdentifier: process.env.APPLE_PASS_TYPE_ID!,
       teamIdentifier: process.env.APPLE_TEAM_ID!,
-      foregroundColor: hexToRgb(settings.wallet_text_color),
+      foregroundColor: "rgb(255, 255, 255)",
       backgroundColor: hexToRgb(settings.wallet_bg_color),
-      labelColor: hexToRgb(settings.wallet_text_color),
+      labelColor: "rgb(200, 200, 200)",
     }
   );
 
@@ -64,28 +66,32 @@ export async function generateApplePass(data: PassData): Promise<Buffer> {
 
   pass.primaryFields.push({
     key: "name",
-    label: settings.program_name.toUpperCase(),
+    label: "MITGLIED",
     value: data.customerName,
   });
 
   pass.secondaryFields.push(
     {
-      key: "balance",
-      label: "Aktueller Stand",
-      value: `${data.pointsBalance} Punkte`,
-    },
-    {
       key: "tier",
       label: "Status",
-      value: tier ? `${tier.icon} ${tier.name}` : "Starter",
+      value: tier ? `${tier.icon} ${tier.name}` : "🍕 Starter",
+    },
+    {
+      key: "next",
+      label: "Naechste Stufe",
+      value: nextTier ? `noch ${nextTier.pointsNeeded} Pkt` : "🏆 Max erreicht!",
     }
   );
 
-  pass.auxiliaryFields.push({
-    key: "total",
-    label: "Gesamt gesammelt",
-    value: `${data.totalEarned} Punkte`,
-  });
+  pass.auxiliaryFields.push(
+    {
+      key: "member_since",
+      label: "Mitglied seit",
+      value: data.createdAt
+        ? new Date(data.createdAt).toLocaleDateString("de-DE", { month: "long", year: "numeric" })
+        : new Date().toLocaleDateString("de-DE", { month: "long", year: "numeric" }),
+    }
+  );
 
   pass.backFields.push(
     {

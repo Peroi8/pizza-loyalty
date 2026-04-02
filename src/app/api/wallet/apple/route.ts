@@ -33,6 +33,7 @@ export async function GET(request: NextRequest) {
       customerName: customer.name,
       pointsBalance: customer.points_balance,
       totalEarned: customer.total_points_earned,
+      createdAt: customer.created_at,
     });
 
     return new NextResponse(new Uint8Array(passBuffer), {
