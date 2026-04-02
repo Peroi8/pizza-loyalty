@@ -37,7 +37,7 @@ export async function createGoogleWalletClass(): Promise<void> {
     issuerName: settings.pizzeria_name,
     programName: settings.program_name,
     programLogo: {
-      sourceUri: { uri: `${process.env.NEXT_PUBLIC_APP_URL}/icon.png` },
+      sourceUri: { uri: `${process.env.NEXT_PUBLIC_APP_URL}/google-logo.png` },
       contentDescription: { defaultValue: { language: "de", value: "Logo" } },
     },
     reviewStatus: "UNDER_REVIEW",

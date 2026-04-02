@@ -25,7 +25,7 @@ export async function generateApplePass(data: PassData): Promise<Buffer> {
   // Icon-Bilder laden (Apple verlangt mindestens icon.png)
   const publicDir = path.resolve(process.cwd(), "public");
   const passImages: Record<string, Buffer> = {};
-  const imageFiles = ["icon.png", "icon@2x.png", "icon@3x.png", "logo.png", "logo@2x.png"];
+  const imageFiles = ["icon.png", "icon@2x.png", "icon@3x.png", "logo.png", "logo@2x.png", "logo@3x.png", "strip.png", "strip@2x.png", "strip@3x.png"];
   for (const img of imageFiles) {
     try {
       passImages[img] = fs.readFileSync(path.join(publicDir, img));
