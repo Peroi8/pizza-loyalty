@@ -67,6 +67,20 @@ export async function GET() {
       }
     }
 
+    // Also check modulus hashes
+    if (certB64) {
+      const certPem = Buffer.from(certB64, "base64").toString("utf-8");
+      const cert = new crypto.X509Certificate(certPem);
+      const certPub = cert.publicKey.export({ type: "spki", format: "der" });
+      results.certModulusHash = crypto.createHash("md5").update(certPub).digest("hex");
+    }
+    if (keyB64) {
+      const keyPem = Buffer.from(keyB64, "base64").toString("utf-8");
+      const key = crypto.createPrivateKey(keyPem);
+      const keyPub = crypto.createPublicKey(key).export({ type: "spki", format: "der" });
+      results.keyModulusHash = crypto.createHash("md5").update(keyPub).digest("hex");
+    }
+
     return NextResponse.json(results);
   } catch (err) {
     return NextResponse.json({ error: (err as Error).message }, { status: 500 });
