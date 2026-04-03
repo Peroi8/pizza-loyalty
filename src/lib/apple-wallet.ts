@@ -50,9 +50,9 @@ export async function generateApplePass(data: PassData): Promise<Buffer> {
       organizationName: settings.pizzeria_name,
       passTypeIdentifier: process.env.APPLE_PASS_TYPE_ID!,
       teamIdentifier: process.env.APPLE_TEAM_ID!,
-      foregroundColor: "rgb(255, 255, 255)",
+      foregroundColor: "rgb(0, 0, 0)",
       backgroundColor: hexToRgb(settings.wallet_bg_color),
-      labelColor: "rgb(200, 200, 200)",
+      labelColor: "rgb(100, 100, 100)",
     }
   );
 
@@ -64,15 +64,13 @@ export async function generateApplePass(data: PassData): Promise<Buffer> {
     value: data.pointsBalance,
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (pass.primaryFields as any[]).push({
-    key: "name",
-    label: "MITGLIED",
-    value: data.customerName,
-    textAlignment: "PKTextAlignmentCenter",
-  });
-
+  // primaryFields leer lassen – Name kommt unter den Strip
   pass.secondaryFields.push(
+    {
+      key: "name",
+      label: "Mitglied",
+      value: data.customerName,
+    },
     {
       key: "tier",
       label: "Status",
@@ -81,14 +79,17 @@ export async function generateApplePass(data: PassData): Promise<Buffer> {
     {
       key: "next",
       label: "Naechste Stufe",
-      value: nextTier ? `noch ${nextTier.pointsNeeded} Pkt` : "🏆 Max erreicht!",
-    },
+      value: nextTier ? `noch ${nextTier.pointsNeeded} Pkt` : "🏆 Max!",
+    }
+  );
+
+  pass.auxiliaryFields.push(
     {
       key: "member_since",
       label: "Mitglied seit",
       value: data.createdAt
-        ? new Date(data.createdAt).toLocaleDateString("de-DE", { month: "short", year: "numeric" })
-        : new Date().toLocaleDateString("de-DE", { month: "short", year: "numeric" }),
+        ? new Date(data.createdAt).toLocaleDateString("de-DE", { month: "long", year: "numeric" })
+        : new Date().toLocaleDateString("de-DE", { month: "long", year: "numeric" }),
     }
   );
 
