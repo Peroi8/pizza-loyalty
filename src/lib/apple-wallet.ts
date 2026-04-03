@@ -83,15 +83,6 @@ export async function generateApplePass(data: PassData): Promise<Buffer> {
     }
   );
 
-  pass.auxiliaryFields.push(
-    {
-      key: "member_since",
-      label: "Mitglied seit",
-      value: data.createdAt
-        ? new Date(data.createdAt).toLocaleDateString("de-DE", { month: "long", year: "numeric" })
-        : new Date().toLocaleDateString("de-DE", { month: "long", year: "numeric" }),
-    }
-  );
 
   pass.backFields.push(
     {
